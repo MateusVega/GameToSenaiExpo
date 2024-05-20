@@ -1,6 +1,7 @@
 import pygame, sys
 from utils.button import Button
 import serial.tools.list_ports
+import subprocess
 
 pygame.init()
 
@@ -113,7 +114,7 @@ def main_menu():
                 sys.exit()
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if PLAY_BUTTON.checkForInput(MENU_MOUSE_POS):
-                    play()
+                    subprocess.run(["python", "fase1.py"])
                 if OPTIONS_BUTTON.checkForInput(MENU_MOUSE_POS):
                     options()
                 if QUIT_BUTTON.checkForInput(MENU_MOUSE_POS):
