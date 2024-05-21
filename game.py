@@ -27,7 +27,7 @@ timer = 0
 map_c = 3
 count_time = 0
 real_time = 0
-name_user = ''
+player_name = ''
 
 true_scroll = [0,0]
 
@@ -72,6 +72,69 @@ class thorn_obj():
     def collision_test(self, rect):
         thorn_rect = self.get_rect()
         return thorn_rect.colliderect(rect)
+
+
+def get_player_name():
+    font = pygame.font.Font(None, 48)
+    input_box_width = 400
+    input_box_height = 48
+    input_box = pygame.Rect((600 - input_box_width) // 2, (400 - input_box_height) // 2, input_box_width, input_box_height)
+    color_inactive = pygame.Color('lightskyblue3')
+    color_active = pygame.Color('dodgerblue2')
+    color = color_inactive
+    active = False
+    text = ''
+    done = False
+
+    while not done:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if input_box.collidepoint(event.pos):
+                    active = not active
+                else:
+                    active = False
+                color = color_active if active else color_inactive
+            if event.type == pygame.KEYDOWN:
+                if active:
+                    if event.key == pygame.K_RETURN:
+                        done = True
+                    elif event.key == pygame.K_BACKSPACE:
+                        text = text[:-1]
+                    else:
+                        text += event.unicode
+
+        screen.fill((30, 30, 30))
+        txt_surface = font.render(text, True, color)
+        width = max(input_box_width, txt_surface.get_width()+10)
+        input_box.w = width
+        screen.blit(txt_surface, (input_box.x+5, input_box.y+5))
+        pygame.draw.rect(screen, color, input_box, 2)
+        pygame.display.flip()
+        clock.tick(30)
+
+    return text
+
+def atualizar_ranking(player, tempo):
+    with open('rank.txt', 'r') as file:
+        linhas = file.readlines()
+
+    encontrado = False
+    for i, linha in enumerate(linhas):
+        dados = linha.strip().split(',')
+        if dados[0] == player:
+            linhas[i] = f"{player},{tempo}\n"
+            encontrado = True
+            break
+    if not encontrado:
+        linhas.append(f"{player},{tempo}\n")
+
+    linhas.sort(key=lambda x: int(x.strip().split(',')[1]), reverse=True)
+
+    with open('rank.txt', 'w') as file:
+        file.writelines(linhas)
 
 def load_map(path):
     with open('map' + str(path) + '.txt','r') as f:
@@ -373,9 +436,16 @@ while True:
             else:
                 can_walk = False
                 portal_objects.clear()
+                moving_right = False
+                moving_left = False
+                vertical_momentum = 0
+                air_timer = 0
                 with open('timer_fase.txt', 'r') as arquivo:
                     linhas = arquivo.readlines()
                 soma = sum(int(linha.strip()) for linha in linhas)
+                sleep(2)
+                player_name = get_player_name()
+                atualizar_ranking(player_name, soma)
 
     for event in pygame.event.get():
         if event.type == QUIT:
