@@ -1,5 +1,6 @@
 import pygame, sys, random
 from time import sleep
+import serial.tools.list_ports
 
 clock = pygame.time.Clock()
 
@@ -28,6 +29,15 @@ map_c = 3
 count_time = 0
 real_time = 0
 player_name = ''
+
+command = "OFF"
+
+ports = serial.tools.list_ports.comports()
+serial_inst = serial.Serial()
+
+serial_inst.baudrate = 9600
+serial_inst.port = 'COM3'
+serial_inst.open()
 
 true_scroll = [0,0]
 
@@ -131,7 +141,7 @@ def atualizar_ranking(player, tempo):
     if not encontrado:
         linhas.append(f"{player},{tempo}\n")
 
-    linhas.sort(key=lambda x: int(x.strip().split(',')[1]), reverse=True)
+    linhas.sort(key=lambda x: int(x.strip().split(',')[1]), reverse=False)
 
     with open('rank.txt', 'w') as file:
         file.writelines(linhas)
@@ -446,6 +456,9 @@ while True:
                 sleep(2)
                 player_name = get_player_name()
                 atualizar_ranking(player_name, soma)
+                if command == "OFF":
+                    serial_inst.write("ON".encode('utf-8'))
+                    command = "ON"
 
     for event in pygame.event.get():
         if event.type == QUIT:

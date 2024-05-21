@@ -16,7 +16,7 @@ ports = serial.tools.list_ports.comports()
 serial_inst = serial.Serial()
 
 serial_inst.baudrate = 9600
-serial_inst.port = 'COM3'
+serial_inst.port = 'COM5'
 serial_inst.open()
 
 def get_font(size):
