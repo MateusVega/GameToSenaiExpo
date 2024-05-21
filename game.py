@@ -10,7 +10,8 @@ pygame.mixer.set_num_channels(64)
 
 pygame.display.set_caption('Pygame Platformer')
 
-screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+#screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+screen = pygame.display.set_mode((600,400))
 
 WINDOW_SIZE = screen.get_size()
 
@@ -20,7 +21,13 @@ moving_right = False
 moving_left = False
 vertical_momentum = 0
 air_timer = 0
+jump_count = 0
 num_moedas = 0
+timer = 0
+map_c = 3
+count_time = 0
+real_time = 0
+name_user = ''
 
 true_scroll = [0,0]
 
@@ -38,6 +45,20 @@ class jumper_obj():
         jumper_rect = self.get_rect()
         return jumper_rect.colliderect(rect)
 
+class portal_obj():
+    def __init__(self, loc):
+        self.loc = loc  # Use the passed loc parameter
+
+    def render(self, surf, scroll):
+        surf.blit(Portal_image, (self.loc[0] - scroll[0], self.loc[1] - scroll[1]))
+    
+    def get_rect(self):
+        return pygame.Rect(self.loc[0], self.loc[1], 16, 16)
+    
+    def collision_test(self, rect):
+        portal_rect = self.get_rect()
+        return portal_rect.colliderect(rect)
+
 class thorn_obj():
     def __init__(self, loc):
         self.loc = loc  # Use the passed loc parameter
@@ -53,7 +74,7 @@ class thorn_obj():
         return thorn_rect.colliderect(rect)
 
 def load_map(path):
-    with open(path + '.txt','r') as f:
+    with open('map' + str(path) + '.txt','r') as f:
         data = f.read()
     data = data.split('\n')
     game_map = [list(row) for row in data]
@@ -61,6 +82,9 @@ def load_map(path):
 
 global animation_frames
 animation_frames = {}
+
+with open("timer_fase.txt", "w") as f:
+    f.write('')
 
 def load_animation(path,frame_durations):
     global animation_frames
@@ -71,7 +95,8 @@ def load_animation(path,frame_durations):
         animation_frame_id = animation_name + '_' + str(n)
         img_loc = path + '/' + animation_frame_id + '.png'
         animation_image = pygame.image.load(img_loc).convert()
-        #animation_image.set_colorkey((255,255,255))
+        if path == 'sprites/Cuei/run' or path == 'sprites/Cuei/idle':
+            animation_image.set_colorkey((100,255,100))
         animation_frames[animation_frame_id] = animation_image.copy()
         animation_frame_data.extend([animation_frame_id] * frame)
         n += 1
@@ -88,18 +113,20 @@ def get_font(size):
 
 animation_database = {}
 
-animation_database['run'] = load_animation('sprites/player/run',[7,7])
-animation_database['idle'] = load_animation('sprites/player/idle',[7,7,40])
+animation_database['run'] = load_animation('sprites/Cuei/run',[7,7,7,7,40])
+animation_database['idle'] = load_animation('sprites/Cuei/idle',[7,7,7,40])
 
-game_map = load_map('map1')
-
-grass_img = pygame.image.load('sprites/grass.png')
-dirt_img = pygame.image.load('sprites/dirt.png')
+grass1_img = pygame.image.load('sprites/Grass/Grass1.png')
+dirt1_img = pygame.image.load('sprites/Grass/Dirt1.png')
+grass2_img = pygame.image.load('sprites/Grass/Grass1.png')
 cogV_img = pygame.image.load('sprites/deco/cogumelo1.png')
 cogM_img = pygame.image.load('sprites/deco/cogumelo2.png')
 
 thorn_image = pygame.image.load('sprites/thorn.png').convert()
 thorn_image.set_colorkey((255,255,255))
+
+Portal_image = pygame.image.load('sprites/jumper.png').convert()
+Portal_image.set_colorkey((255,255,255))
 
 Jumper_image = pygame.image.load('sprites/jumper.png').convert()
 Jumper_image.set_colorkey((255,255,255))
@@ -118,6 +145,7 @@ player_action = 'idle'
 player_frame = 0
 player_flip = False
 player_life = 5
+can_walk = True
 
 grass_sound_timer = 0
 
@@ -135,12 +163,11 @@ background_objects = [[0.25,[120,10,70,400]],[0.25,[280,30,40,400]],[0.5,[30,40,
 
 jumper_objects = []
 thorn_objects = []
-
-# Precarregar os coin_rects e outros objetos
+portal_objects = []
 tile_rects = []
 
 y = 0
-for layer in game_map:
+for layer in load_map(map_c):
     x = 0
     for tile in layer:
         if tile == 'c':
@@ -150,14 +177,20 @@ for layer in game_map:
             jumper_objects.append(jumper_obj((x*16,y*16)))
         if tile == 'T':
             thorn_objects.append(thorn_obj((x*16,y*16)))
-        if tile in ['1','2']:
+        if tile == 'P':
+            portal_objects.append(portal_obj((x*16,y*16)))
+        if tile in ['1','2','3']:
             tile_rects.append(pygame.Rect(x*16, y*16, 16, 16))
         x += 1
     y += 1
 
-def reset_level(coin_rects_list):
-    global player_rect, vertical_momentum, air_timer, player_action, player_frame, player_flip, player_life, num_moedas
+def reset_level(coin_rects_list, map_choice):
+    global player_rect, vertical_momentum, air_timer, player_action, player_frame, player_flip, player_life, num_moedas, count_time, real_time, text_timer, timer_text_rect
     coin_rects_list.clear()  # Limpa a lista de moedas
+    jumper_objects.clear()
+    thorn_objects.clear()
+    portal_objects.clear()
+    tile_rects.clear()
     coin_positions = set()  # Armazena as posições das moedas para evitar duplicatas
     player_rect = pygame.Rect(50, 50, 16, 16)
     vertical_momentum = 0
@@ -168,6 +201,8 @@ def reset_level(coin_rects_list):
     player_life = 5
     num_moedas = 0
     y = 0
+    if map_c <= 3:
+        game_map = load_map(map_choice)
     for layer in game_map:
         x = 0
         for tile in layer:
@@ -181,7 +216,9 @@ def reset_level(coin_rects_list):
                 jumper_objects.append(jumper_obj((x*16,y*16)))
             if tile == 'T':
                 thorn_objects.append(thorn_obj((x*16,y*16)))
-            if tile in ['1','2']:
+            if tile == 'P':
+                portal_objects.append(portal_obj((x*16,y*16)))
+            if tile in ['1','2','3']:
                 tile_rects.append(pygame.Rect(x*16, y*16, 16, 16))
             x += 1
         y += 1
@@ -212,6 +249,9 @@ def move(rect, movement, tiles):
             collision_types['top'] = True
     return rect, collision_types
 
+text_timer = get_font(30).render(f"{real_time}", True, (255,255,255))
+timer_text_rect = text_timer.get_rect(center=(35, 19+20))
+
 while True:
     scale_factor = 2
     scaled_display = pygame.transform.scale(display, (WINDOW_SIZE[0] * scale_factor, WINDOW_SIZE[1] * scale_factor))
@@ -222,6 +262,14 @@ while True:
 
     text = get_font(30).render(f"{num_moedas}", True, (255,255,255))
     text_rect = text.get_rect(center=(35, 19))
+
+    if can_walk:
+        count_time += 1
+        if count_time == 100:
+            count_time = 0
+            real_time += 1
+            text_timer = get_font(30).render(f"{real_time}", True, (255,255,255))
+            timer_text_rect = text_timer.get_rect(center=(35, 19+20))
 
     if grass_sound_timer > 0:
         grass_sound_timer -= 1
@@ -237,21 +285,23 @@ while True:
             pygame.draw.rect(display,(14,222,150),obj_rect)
         else:
             pygame.draw.rect(display,(9,91,85),obj_rect)
-
-    display.blit(coin_sprite, image_rect)
-    display.blit(text,text_rect)
-
-
-    for y, layer in enumerate(game_map):
-        for x, tile in enumerate(layer):
-            if tile == '1':
-                display.blit(dirt_img,(x*16-scroll[0],y*16-scroll[1]))
-            if tile == '2':
-                display.blit(grass_img,(x*16-scroll[0],y*16-scroll[1]))
-            if tile == 'v':
-                display.blit(cogV_img,(x*16-scroll[0],y*16-scroll[1]))
-            if tile == 'm':
-                display.blit(cogM_img,(x*16-scroll[0],y*16-scroll[1]))
+    if can_walk:
+        display.blit(coin_sprite, image_rect)
+        display.blit(text,text_rect)
+        display.blit(text_timer,timer_text_rect)
+    if map_c <= 3:
+        for y, layer in enumerate(load_map(map_c)):
+            for x, tile in enumerate(layer):
+                if tile == '1':
+                    display.blit(grass1_img,(x*16-scroll[0],y*16-scroll[1]))
+                if tile == '2':
+                    display.blit(grass2_img,(x*16-scroll[0],y*16-scroll[1]))
+                if tile == '3':
+                    display.blit(dirt1_img,(x*16-scroll[0],y*16-scroll[1]))
+                if tile == 'v':
+                    display.blit(cogV_img,(x*16-scroll[0],y*16-scroll[1]))
+                if tile == 'm':
+                    display.blit(cogM_img,(x*16-scroll[0],y*16-scroll[1]))
 
     player_movement = [0,0]
     if moving_right:
@@ -264,11 +314,16 @@ while True:
         vertical_momentum = 3
 
     if player_rect.y > 200:
-        reset_level(coin_rects)
+        if map_c <= 3:
+            reset_level(coin_rects, map_c)
 
     player_rect,collisions = move(player_rect,player_movement,tile_rects)
 
+    if collisions['top']:
+        vertical_momentum = 0
+
     if collisions['bottom']:
+        jump_count = 0
         vertical_momentum = 0
         air_timer = 0
     else:
@@ -300,26 +355,49 @@ while True:
     for thorn in thorn_objects:
         thorn.render(display, scroll)
         if thorn.collision_test(player_rect):
-            reset_level(coin_rects)
+            reset_level(coin_rects, map_c)
+
+    for portal in portal_objects:
+        portal.render(display, scroll)
+        if portal.collision_test(player_rect):
+            map_c += 1
+            f = open("timer_fase.txt", "a")
+            f.write(f'{real_time}\n')
+            f.close()
+            count_time = 0
+            real_time = 0
+            text_timer = get_font(30).render(f"{real_time}", True, (255,255,255))
+            timer_text_rect = text_timer.get_rect(center=(35, 19+20))
+            if map_c <= 3:
+                reset_level(coin_rects, map_c)
+            else:
+                can_walk = False
+                portal_objects.clear()
+                with open('timer_fase.txt', 'r') as arquivo:
+                    linhas = arquivo.readlines()
+                soma = sum(int(linha.strip()) for linha in linhas)
 
     for event in pygame.event.get():
         if event.type == QUIT:
             pygame.quit()
             sys.exit()
-        if event.type == KEYDOWN:
-            if event.key == K_d:
-                moving_right = True
-            if event.key == K_a:
-                moving_left = True
-            if event.key == K_w:
-                if air_timer < 6:
-                    vertical_momentum = -4
-                    jump_sound.play()
-        if event.type == KEYUP:
-            if event.key == K_d:
-                moving_right = False
-            if event.key == K_a:
-                moving_left = False
+        if can_walk:
+            if event.type == KEYDOWN:
+                if event.key == K_d:
+                    moving_right = True
+                if event.key == K_a:
+                    moving_left = True
+                if event.key == K_w:
+                    if jump_count < 2:
+                    #if air_timer < 6:
+                        jump_count += 1
+                        vertical_momentum = -3.8
+                        jump_sound.play()
+            if event.type == KEYUP:
+                if event.key == K_d:
+                    moving_right = False
+                if event.key == K_a:
+                    moving_left = False
 
     screen.blit(pygame.transform.scale(display,WINDOW_SIZE),(0,0))
     pygame.display.update()
