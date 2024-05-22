@@ -1,10 +1,9 @@
 import pygame, sys, random
 from time import sleep
 import serial.tools.list_ports
+from pygame.locals import *
 
 clock = pygame.time.Clock()
-
-from pygame.locals import *
 pygame.mixer.pre_init(44100, -16, 2, 512)
 pygame.init()
 pygame.mixer.set_num_channels(64)
@@ -33,11 +32,10 @@ bg2 = pygame.image.load('sprites/Background_1.png')
 
 command = "OFF"
 
-ports = serial.tools.list_ports.comports()
 serial_inst = serial.Serial()
 
 serial_inst.baudrate = 9600
-serial_inst.port = 'COM3'
+serial_inst.port = 'COM11'
 if not serial_inst.isOpen():
     serial_inst.open()
 
@@ -79,7 +77,7 @@ class thorn_obj():
         surf.blit(thorn_image, (self.loc[0] - scroll[0], self.loc[1] - scroll[1]))
     
     def get_rect(self):
-        return pygame.Rect(self.loc[0], self.loc[1], 16, 16)
+        return pygame.Rect(self.loc[0], self.loc[1], 16, 8)
     
     def collision_test(self, rect):
         thorn_rect = self.get_rect()

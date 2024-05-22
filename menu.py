@@ -1,7 +1,6 @@
 import pygame, sys
 from utils.button import Button
 import serial.tools.list_ports
-import subprocess
 
 pygame.init()
 
@@ -22,7 +21,7 @@ ports = serial.tools.list_ports.comports()
 serial_inst = serial.Serial()
 
 serial_inst.baudrate = 9600
-serial_inst.port = 'COM3'
+serial_inst.port = 'COM11'
 if not serial_inst.isOpen():
     serial_inst.open()
 
@@ -94,7 +93,7 @@ def main_menu():
                 sys.exit()
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if PLAY_BUTTON.checkForInput(MENU_MOUSE_POS):
-                    subprocess.run(["python", "gameplay.py"])
+                    pass #RODA O JOGO AQUI
                 if OPTIONS_BUTTON.checkForInput(MENU_MOUSE_POS):
                     options()
                 if QUIT_BUTTON.checkForInput(MENU_MOUSE_POS):
