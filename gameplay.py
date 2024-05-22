@@ -88,7 +88,7 @@ def show_ranking():
     font = pygame.font.Font(None, 48 * 2)
     ranking_text = []
 
-    with open('rank.txt', 'r') as file:
+    with open('txt_files/rank.txt', 'r') as file:
         lines = file.readlines()
 
     for i, line in enumerate(lines):
@@ -195,7 +195,7 @@ def get_player_name():
     return text
 
 def atualizar_ranking(player, tempo):
-    with open('rank.txt', 'r') as file:
+    with open('txt_files/rank.txt', 'r') as file:
         linhas = file.readlines()
 
     encontrado = False
@@ -210,11 +210,11 @@ def atualizar_ranking(player, tempo):
 
     linhas.sort(key=lambda x: int(x.strip().split(',')[1]), reverse=False)
 
-    with open('rank.txt', 'w') as file:
+    with open('txt_files/rank.txt', 'w') as file:
         file.writelines(linhas)
 
 def load_map(path):
-    with open('map' + str(path) + '.txt','r') as f:
+    with open('maps/map' + str(path) + '.txt','r') as f:
         data = f.read()
     data = data.split('\n')
     game_map = [list(row) for row in data]
@@ -223,9 +223,9 @@ def load_map(path):
 global animation_frames
 animation_frames = {}
 
-with open("timer_fase.txt", "w") as f:
+with open("txt_files/timer_fase.txt", "w") as f:
     f.write('')
-with open("coins_fase.txt", "w") as f:
+with open("txt_files/coins_fase.txt", "w") as f:
     f.write('')
 
 def load_animation(path,frame_durations):
@@ -511,10 +511,10 @@ while True:
         portal.render(display, scroll)
         if portal.collision_test(player_rect):
             map_c += 1
-            f = open("timer_fase.txt", "a")
+            f = open("txt_files/timer_fase.txt", "a")
             f.write(f'{real_time}\n')
             f.close()
-            f = open("coins_fase.txt", "a")
+            f = open("txt_files/coins_fase.txt", "a")
             f.write(f'{num_moedas}\n')
             f.close()
             count_time = 0
@@ -530,7 +530,7 @@ while True:
                 moving_left = False
                 vertical_momentum = 0
                 air_timer = 0
-                with open('timer_fase.txt', 'r') as arquivo:
+                with open('txt_files/timer_fase.txt', 'r') as arquivo:
                     linhas = arquivo.readlines()
                 somaT = sum(int(linha.strip()) for linha in linhas)
                 '''                
