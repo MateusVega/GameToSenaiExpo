@@ -1,6 +1,7 @@
 import pygame, sys, random
 from time import sleep
 import serial.tools.list_ports
+from utils.button import Button
 from pygame.locals import *
 
 clock = pygame.time.Clock()
@@ -11,7 +12,6 @@ pygame.mixer.set_num_channels(64)
 pygame.display.set_caption('Pygame Platformer')
 
 screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
-#screen = pygame.display.set_mode((600,400))
 
 WINDOW_SIZE = screen.get_size()
 
@@ -83,6 +83,48 @@ class thorn_obj():
         thorn_rect = self.get_rect()
         return thorn_rect.colliderect(rect)
 
+info = pygame.display.Info()
+screen_width = info.current_w
+screen_height = info.current_h
+
+BG = pygame.image.load("sprites/Background_2.png")
+BG = pygame.transform.scale(BG, (screen_width, screen_height))
+opened = False
+
+def menu():
+    global BG, opened, can_walk
+    while not opened:
+        can_walk = False
+        screen.blit(BG, (0,0))
+
+        mouse_pos = pygame.mouse.get_pos()
+
+        menu_text = get_fontPixel(100).render("RABBIT RUNNER", True, "#a7f5ff")
+        menu_text_rect = menu_text.get_rect(center=(screen_width / 2, screen_height / 7)) 
+
+        play_button = Button(image=pygame.image.load("assets/Play Rect.png"), pos=(screen_width / 2, screen_height / 2.4), text_input="JOGAR", font=get_fontPixel(75), base_color="#a7f5ff", hovering_color="White")
+        quit_button = Button(image=pygame.image.load("assets/Quit Rect.png"), pos=(screen_width / 2, screen_height / 1.5), text_input="SAIR", font=get_fontPixel(75), base_color="#a7f5ff", hovering_color="White")
+
+        screen.blit(menu_text, menu_text_rect)
+
+        for button in [play_button, quit_button]:
+            button.changeColor(mouse_pos)
+            button.update(screen)
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if play_button.checkForInput(mouse_pos):
+                    opened = True
+                    can_walk = True
+                if quit_button.checkForInput(mouse_pos):
+                    pygame.quit()
+                    sys.exit()
+
+        pygame.display.update()
+
 def show_ranking():
     Done = False
     font = pygame.font.Font(None, 48 * 2)
@@ -94,12 +136,11 @@ def show_ranking():
     for i, line in enumerate(lines):
         if i + 1 <= 3:
             player, time = line.strip().split(',')
-            ranking_text.append(f"{i + 1}. {player}: {time} s")
+            ranking_text.append(f"{i + 1}. {player}: {time}")
 
     label_surface = font.render("RANKING", True, (255, 255, 255))
     label_surface2 = font.render("PRESSIONE ESPAÇO PARA SAIR", True, (255, 255, 255))
 
-    color_inactive = pygame.Color('lightskyblue3')
     color_active = pygame.Color('dodgerblue2')
     color = color_active
 
@@ -120,6 +161,8 @@ def show_ranking():
         input_box = pygame.Rect((screen_width - input_box_width) // 2, text_y, input_box_width, input_box_height)
         text_surfaces.append((txt_surface, input_box))
         text_y += 150
+
+    serial_inst.write("ON".encode('utf-8'))
 
     while not Done:
         for event in pygame.event.get():
@@ -143,15 +186,10 @@ def show_ranking():
         pygame.display.flip()
         clock.tick(30)
 
-    serial_inst.write("ON".encode('utf-8'))
-    sleep(2)
     serial_inst.write("OFF".encode('utf-8'))
-    
-    pygame.quit()
-    sys.exit()
 
 def get_player_name():
-    font = pygame.font.Font(None, 48*2)
+    font = pygame.font.Font(None, 48 * 2)
     input_box_width = 400 * 2 
     input_box_height = 48 * 2
     screen_width, screen_height = screen.get_size()
@@ -162,6 +200,10 @@ def get_player_name():
     active = False
     text = ''
     done = False
+    
+    label_text = "DIGITE SEU NOME"
+    label_surface = font.render(label_text, True, (255, 255, 255))
+    text_y_label = (screen_height - input_box_height) // 2 - 180
 
     while not done:
         for event in pygame.event.get():
@@ -184,15 +226,22 @@ def get_player_name():
                         text += event.unicode
 
         screen.fill((30, 30, 30))
+        # Renderize o texto "Digite seu nome"
+        text_rect_label = label_surface.get_rect(center=(screen_width // 2, text_y_label))
+        screen.blit(label_surface, text_rect_label)
+
+        # Renderize o texto inserido pelo usuário
         txt_surface = font.render(text, True, color)
         width = max(input_box_width, txt_surface.get_width() + 10)
         input_box.w = width
         screen.blit(txt_surface, (input_box.x + 5, input_box.y + 5))
         pygame.draw.rect(screen, color, input_box, 2)
+        
         pygame.display.flip()
         clock.tick(30)
 
     return text
+
 
 def atualizar_ranking(player, tempo):
     with open('txt_files/rank.txt', 'r') as file:
@@ -202,7 +251,7 @@ def atualizar_ranking(player, tempo):
     for i, linha in enumerate(linhas):
         dados = linha.strip().split(',')
         if dados[0] == player:
-            linhas[i] = f"{player},{tempo}s\n"
+            linhas[i] = f"{player},{tempo}\n"
             encontrado = True
             break
     if not encontrado:
@@ -224,8 +273,6 @@ global animation_frames
 animation_frames = {}
 
 with open("txt_files/timer_fase.txt", "w") as f:
-    f.write('')
-with open("txt_files/coins_fase.txt", "w") as f:
     f.write('')
 
 def load_animation(path,frame_durations):
@@ -255,6 +302,9 @@ def change_action(action_var,frame,new_value):
 def get_font(size):
     return pygame.font.Font(None, size)
 
+def get_fontPixel(size):
+    return pygame.font.Font("assets/font.ttf", size)
+
 animation_database = {}
 
 personagem = 'Cuei'
@@ -262,20 +312,25 @@ personagem = 'Cuei'
 animation_database['run'] = load_animation(f'sprites/{personagem}/run',[7,7,7,7,40])
 animation_database['idle'] = load_animation(f'sprites/{personagem}/idle',[7,7,7,40])
 
-grass1_img = pygame.image.load('sprites/Grass/Grass1.png')
-dirt1_img = pygame.image.load('sprites/Grass/Dirt1.png')
-grass2_img = pygame.image.load('sprites/Grass/Grass1.png')
-cogV_img = pygame.image.load('sprites/deco/cogumelo1.png')
-cogM_img = pygame.image.load('sprites/deco/cogumelo2.png')
-florRs_img = pygame.image.load('sprites/deco/FP.png')
-florRx_img = pygame.image.load('sprites/deco/FPU.png')
-florAz_img = pygame.image.load('sprites/deco/FB.png')
+grass1_img = pygame.image.load('sprites/Grass/Grass1.png').convert()
+dirt1_img = pygame.image.load('sprites/Grass/Dirt1.png').convert()
+grass2_img = pygame.image.load('sprites/Grass/Grass1.png').convert()
+cogV_img = pygame.image.load('sprites/deco/cogumelo1.png').convert()
+cogV_img.set_colorkey((0,0,0))
+cogM_img = pygame.image.load('sprites/deco/cogumelo2.png').convert()
+cogM_img.set_colorkey((0,0,0))
+florRs_img = pygame.image.load('sprites/deco/FP.png').convert()
+florRs_img.set_colorkey((0,0,0))
+florRx_img = pygame.image.load('sprites/deco/FPU.png').convert()
+florRx_img.set_colorkey((0,0,0))
+florAz_img = pygame.image.load('sprites/deco/FB.png').convert()
+florAz_img.set_colorkey((0,0,0))
 
 thorn_image = pygame.image.load('sprites/deco/thorn.png').convert()
 thorn_image.set_colorkey((255,255,255))
 
-Portal_image = pygame.image.load('sprites/deco/jumper.png').convert()
-Portal_image.set_colorkey((255,255,255))
+Portal_image = pygame.image.load('sprites/deco/flag.png').convert()
+Portal_image.set_colorkey("#0fbc00")
 
 Jumper_image = pygame.image.load('sprites/deco/jumper.png').convert()
 Jumper_image.set_colorkey((255,255,255))
@@ -302,8 +357,10 @@ player_rect = pygame.Rect(60,60,16,16)
 
 delay_hit = 0
 
-coin_sprite = pygame.image.load('sprites/deco/coin.png')
-clock_sprite = pygame.image.load('sprites/deco/clock.png')
+coin_sprite = pygame.image.load('sprites/deco/coin.png').convert()
+coin_sprite.set_colorkey("#0fbc00")
+clock_sprite = pygame.image.load('sprites/deco/clock.png').convert()
+clock_sprite.set_colorkey("#0fbc00")
 clock_rect = clock_sprite.get_rect()
 clock_rect.topleft = (10, 30)
 image_rect = coin_sprite.get_rect()
@@ -334,8 +391,19 @@ for layer in load_map(map_c):
         x += 1
     y += 1
 
-def reset_level(coin_rects_list, map_choice):
-    global player_rect, vertical_momentum, player_action, player_frame, player_flip, player_life, num_moedas, count_time, real_time, text_timer, timer_text_rect, moving_left, moving_right
+def reset_level(coin_rects_list, map_choice, is_end):
+    global opened, player_rect, vertical_momentum, player_action, player_frame, player_flip, player_life, num_moedas, count_time, real_time, text_timer, timer_text_rect, moving_left, moving_right, map_c
+    if is_end == True:
+        opened = False
+        menu()
+        with open("txt_files/timer_fase.txt", "w") as f:
+            f.write('')
+        count_time = 0
+        real_time = 0
+        map_c = 1
+        game_map = load_map(map_c)
+    else:
+        game_map = load_map(map_choice)
     coin_rects_list.clear()
     jumper_objects.clear()
     thorn_objects.clear()
@@ -352,8 +420,6 @@ def reset_level(coin_rects_list, map_choice):
     player_life = 5
     num_moedas = 0
     y = 0
-    if map_c <= 3:
-        game_map = load_map(map_choice)
     for layer in game_map:
         x = 0
         for tile in layer:
@@ -403,6 +469,8 @@ def move(rect, movement, tiles):
 text_timer = get_font(30).render(f"{real_time}", True, (255,255,255))
 timer_text_rect = text_timer.get_rect(center=(35, 19+20))
 
+menu()
+
 while True:
     scale_factor = 2
     scaled_display = pygame.transform.scale(display, (WINDOW_SIZE[0] * scale_factor, WINDOW_SIZE[1] * scale_factor))
@@ -415,6 +483,9 @@ while True:
 
     text = get_font(30).render(f"{num_moedas}", True, (255,255,255))
     text_rect = text.get_rect(center=(35, 19))
+
+    if map_c <= 3:
+        can_walk = True
 
     if can_walk:
         count_time += 1
@@ -466,9 +537,9 @@ while True:
     if vertical_momentum > 3:
         vertical_momentum = 3
 
-    if player_rect.y > 200:
+    if player_rect.y > 120:
         if map_c <= 3:
-            reset_level(coin_rects, map_c)
+            reset_level(coin_rects, map_c, False)
 
     player_rect,collisions = move(player_rect,player_movement,tile_rects)
 
@@ -505,7 +576,7 @@ while True:
     for thorn in thorn_objects:
         thorn.render(display, scroll)
         if thorn.collision_test(player_rect):
-            reset_level(coin_rects, map_c)
+            reset_level(coin_rects, map_c, False)
 
     for portal in portal_objects:
         portal.render(display, scroll)
@@ -514,15 +585,12 @@ while True:
             f = open("txt_files/timer_fase.txt", "a")
             f.write(f'{real_time}\n')
             f.close()
-            f = open("txt_files/coins_fase.txt", "a")
-            f.write(f'{num_moedas}\n')
-            f.close()
             count_time = 0
             real_time = 0
             text_timer = get_font(30).render(f"{real_time}", True, (255,255,255))
             timer_text_rect = text_timer.get_rect(center=(35, 19+20))
             if map_c <= 3:
-                reset_level(coin_rects, map_c)
+                reset_level(coin_rects, map_c, False)
             else:
                 can_walk = False
                 portal_objects.clear()
@@ -533,13 +601,10 @@ while True:
                 with open('txt_files/timer_fase.txt', 'r') as arquivo:
                     linhas = arquivo.readlines()
                 somaT = sum(int(linha.strip()) for linha in linhas)
-                '''                
-                with open('coins_fase.txt', 'r') as arquivo:
-                    linhas = arquivo.readlines()
-                somaC = sum(int(linha.strip()) for linha in linhas)'''
                 player_name = get_player_name()
                 atualizar_ranking(player_name, somaT)
                 show_ranking()
+                reset_level(coin_rects, map_c, True)
 
     for event in pygame.event.get():
         if event.type == QUIT:
