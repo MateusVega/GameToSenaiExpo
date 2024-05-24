@@ -79,7 +79,7 @@ class thorn_obj():
         surf.blit(thorn_image, (self.loc[0] - scroll[0], self.loc[1] - scroll[1]))
     
     def get_rect(self):
-        return pygame.Rect(self.loc[0], self.loc[1], 16, 8)
+        return pygame.Rect(self.loc[0], self.loc[1], 14, 8)
     
     def collision_test(self, rect):
         thorn_rect = self.get_rect()
@@ -163,9 +163,9 @@ def show_ranking():
         input_box = pygame.Rect((screen_width - input_box_width) // 2, text_y, input_box_width, input_box_height)
         text_surfaces.append((txt_surface, input_box))
         text_y += 150
-
+    
     serial_inst.write("ON".encode('utf-8'))
-
+    
     while not Done:
         for event in pygame.event.get():
             if event.type == pygame.KEYDOWN:
@@ -187,9 +187,9 @@ def show_ranking():
 
         pygame.display.flip()
         clock.tick(30)
-
+    
     serial_inst.write("OFF".encode('utf-8'))
-
+    
 def get_player_name():
     font = pygame.font.Font(None, 48 * 2)
     input_box_width = 400 * 2 
@@ -355,7 +355,7 @@ can_walk = True
 
 grass_sound_timer = 0
 
-player_rect = pygame.Rect(60,60,16,16)
+player_rect = pygame.Rect(60,60,12,16)
 
 delay_hit = 0
 
