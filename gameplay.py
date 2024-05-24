@@ -4,6 +4,8 @@ import serial.tools.list_ports
 from utils.button import Button
 from pygame.locals import *
 
+#CONFIGURAR QUAL PORTA = LINHA 40
+
 clock = pygame.time.Clock()
 pygame.mixer.pre_init(44100, -16, 2, 512)
 pygame.init()
